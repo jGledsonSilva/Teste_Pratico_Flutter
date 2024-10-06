@@ -1,193 +1,239 @@
-import 'package:flutter/material.dart';
-import 'package:listagem_de_itens/adapters/item_adapter.dart';
-import 'package:listagem_de_itens/atoms/item_atom.dart';
-import 'package:listagem_de_itens/entities/item_entity.dart';
-import 'package:listagem_de_itens/states/edit_item.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:listagem_de_itens/entities/item_entity.dart';
+import 'package:listagem_de_itens/pages/var.dart';
+import 'package:listagem_de_itens/services/sharedpreferences.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../widgets/text_input.dart';
 
-import '../dtos/iten_dto.dart';
 
 class EditItemPage extends StatefulWidget {
   final ItemEntity? entity;
-  const EditItemPage({
-    super.key,
-    this.entity,
-  });
+
+  const EditItemPage({super.key, this.entity});
 
   @override
-  State<EditItemPage> createState() => _EditIntemPageState();
+  State<EditItemPage> createState() => _EditItemPageState();
 }
 
-class _EditIntemPageState extends State<EditItemPage> {
-  late ItemDto dto;
-
+class _EditItemPageState extends State<EditItemPage> {
   final imagePicker = ImagePicker();
-  File? imageFile;
+  final title = TextEditingController();
+  final description = TextEditingController();
+  final image = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.entity != null) {
+      title.text = widget.entity!.title;
+      description.text = widget.entity!.description;
+      image.text = widget.entity!.image;
+    }
+  }
 
   pick(ImageSource source) async {
     final pickedFile = await imagePicker.pickImage(source: source);
 
     if (pickedFile != null) {
       setState(() {
-        imageFile = File(pickedFile.path);
+        image.text = pickedFile.path;
       });
     }
   }
 
-  bool get editable => widget.entity != null;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.entity != null) {
-      dto = ItemAdapter.entityToDTO(widget.entity!);
+  getid() {
+    int max = 0;
+    List<int> ids = [];
+    if (task != null) {
+      for (var i in task) {
+        ids.add(i.id.toInt());
+      }
+      for (int i in ids) {
+        if (i > max) {
+          max = i;
+        }
+      }
+      return max + 1;
     } else {
-      dto = ItemDto(image: '', title: '', description: '');
+      return 0;
     }
-    edititemState.value = const StartEditItemState();
-    edititemState.addListener(_listener);
   }
 
-  _listener() {
-    setState(() {});
-    return switch (edititemState.value) {
-      StartEditItemState state => state,
-      SavedItemState _ => Navigator.of(context).pop(),
-      LoadingEditItemState state => state,
-      FailureEditItemState state => _showSnackError(state),
-    };
-  }
+  void _saveItem() async {
+    if (title.text != '' && image.text != '' && description.text != '') {
+      // Carregar a lista de itens do SharedPreferences
+      List<ItemEntity> currentTask = await SharedPreferencesService().getList();
 
-  @override
-  void dispose() {
-    edititemState.removeListener(_listener);
-    super.dispose();
-  }
+      if (widget.entity == null) {
+        // Adicionar novo item à lista
+        currentTask.add(ItemEntity(
+            id: getid(),
+            title: title.text,
+            image: image.text,
+            description: description.text));
+      } else {
+        // Atualizar item existente
+        widget.entity!.title = title.text;
+        widget.entity!.image = image.text;
+        widget.entity!.description = description.text;
+      }
 
-  void _showSnackError(FailureEditItemState state) {
-    final snackBar = SnackBar(
-      content: Text(
-        state.message,
-        style: const TextStyle(color: Colors.white),
-      ),
-      backgroundColor: Colors.red,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-  void _save() {
-    if (!dto.isValid()) {
-      _showSnackError(const FailureEditItemState('Campos inválidos'));
-      return;
-    }
-
-    if (editable) {
-      updateItemAction.value = dto.copy();
+      // Salvar a lista atualizada no SharedPreferences
+      SharedPreferencesService().saveList(currentTask);
+      Navigator.of(context).pop(true);
     } else {
-      createItemAction.value = dto.copy();
+      print('Todos os campos são obrigatórios');
     }
   }
 
-  void _clear() {
-    setState(
-        () => dto = ItemDto(id: dto.id, title: '', image: '', description: ''));
+  void _clearFields() {
+    title.clear();
+    image.clear();
+    description.clear();
+  }
+
+  void _cancel() {
+    Navigator.of(context).pop(false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = edititemState.value;
-
-    final enabled = state is! LoadingEditItemState;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit intem'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+        appBar: AppBar(
+          title: const Center(
+              child: Text(
+            'Lista de item',
+            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
+          )),
+        ),
+        body: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
               children: [
-                Stack(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 75,
-                      backgroundColor: Colors.grey[200],
-                      child: CircleAvatar(
-                        radius: 65,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage:
-                            imageFile != null ? FileImage(imageFile!) : null,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 5,
-                      right: 5,
-                      child: CircleAvatar(
-                        backgroundColor: Colors.grey[200],
-                        child: IconButton(
-                          onPressed: _showOpcoesBottomSheet,
-                          icon: Icon(
-                            PhosphorIcons.pencilSimple,
-                            color: Colors.grey[400],
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 125,
+                          backgroundColor: Colors.grey[200],
+                          child: CircleAvatar(
+                            radius: 115,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: image.text != ''
+                                ? FileImage(File(image.text))
+                                : null,
                           ),
                         ),
-                      ),
+                        Positioned(
+                          bottom: 10,
+                          right: 10,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.grey[200],
+                            child: IconButton(
+                              onPressed: _showOpcoesBottomSheet,
+                              icon: Icon(
+                                PhosphorIcons.pencilSimple,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+                const SizedBox(height: 32),
+                Padding(
+                    padding: const EdgeInsets.only(left: 25, right: 25),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextFormField(
+                          controller: title,
+                          decoration: InputDecoration(
+                              hintText: 'Titulo do item',
+                              labelText: 'Titulo',
+                              prefixIcon: Icon(Icons.title),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10))),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        TextFormField(
+                          controller: description,
+                          decoration: InputDecoration(
+                              hintText: 'Descrição do item',
+                              labelText: 'Descrição',
+                              prefixIcon: Icon(Icons.description),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10))),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              TextButton.icon(
+                                  style: ButtonStyle(
+                                      backgroundColor:
+                                          WidgetStateProperty.all(Colors.blue)),
+                                  onPressed: _saveItem,
+                                  icon: const Icon(
+                                    Icons.save,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Save',
+                                    style: TextStyle(color: Colors.white),
+                                  )),
+                              const SizedBox(
+                                width: 10,
+                              ),
+                              TextButton.icon(
+                                  style: ButtonStyle(
+                                      backgroundColor:
+                                          WidgetStateProperty.all(Colors.blue)),
+                                  onPressed: _clearFields,
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Clear',
+                                    style: TextStyle(color: Colors.white),
+                                  )),
+                              const SizedBox(
+                                width: 10,
+                              ),
+                              TextButton.icon(
+                                  style: ButtonStyle(
+                                      backgroundColor:
+                                          WidgetStateProperty.all(Colors.red)),
+                                  onPressed: _cancel,
+                                  icon: const Icon(
+                                    Icons.cancel,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Cancel',
+                                    style: TextStyle(color: Colors.white),
+                                  )),
+                            ],
+                          ),
+                        )
+                      ],
+                    )),
               ],
-            ),
-            const SizedBox(height: 32),
-            TextInput(
-              key: Key('title:$enabled${dto.hashCode}'),
-              enabled: enabled,
-              initialValue: dto.title,
-              hint: 'Titulo',
-              validator: dto.titleValidate,
-              onChanged: (value) => dto.title = value,
-            ),
-            const SizedBox(height: 5),
-            TextInput(
-              key: Key('description:$enabled${dto.hashCode}'),
-              enabled: enabled,
-              initialValue: dto.description,
-              hint: 'Descrição', 
-              validator: dto.descricaoValidate,
-              onChanged: (value) => dto.description = value,
-            ),
-            const SizedBox(height: 5),
-            TextInput(
-              key: Key('details:$enabled${dto.hashCode}'),
-              enabled: enabled,
-              initialValue: dto.image,
-              hint: 'Detalhes',
-              onChanged: (value) => dto.image = value,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                OutlinedButton(
-                  onPressed: !enabled ? null : _save,
-                  child: const Text('Salvar'),
-                ),
-                const SizedBox(width: 10),
-                OutlinedButton(
-                  onPressed: !enabled ? null : _clear,
-                  child: const Text('Limpa'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+            )));
   }
 
   void _showOpcoesBottomSheet() {
@@ -215,7 +261,6 @@ class _EditIntemPageState extends State<EditItemPage> {
                 ),
                 onTap: () {
                   Navigator.of(context).pop();
-                  // Buscar imagem da galeria
                   pick(ImageSource.gallery);
                 },
               ),
@@ -235,7 +280,6 @@ class _EditIntemPageState extends State<EditItemPage> {
                 ),
                 onTap: () {
                   Navigator.of(context).pop();
-                  // Fazer foto da câmera
                   pick(ImageSource.camera);
                 },
               ),
@@ -255,9 +299,8 @@ class _EditIntemPageState extends State<EditItemPage> {
                 ),
                 onTap: () {
                   Navigator.of(context).pop();
-                  // Tornar a foto null
                   setState(() {
-                    imageFile = null;
+                    image.clear();
                   });
                 },
               ),
