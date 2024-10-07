@@ -39,4 +39,4 @@ Requisitos funcionais
 
 ## Uma imagem qu explique o funcionamento do app
 
-![Legenda](Teste_Pratico_Flutter\foto\explicação.png)
+![explicação]([Teste_Pratico_Flutter\foto\explicação.png](https://github.com/jGledsonSilva/Teste_Pratico_Flutter/blob/main/foto/explica%C3%A7%C3%A3o.png))
