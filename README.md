@@ -36,3 +36,7 @@ Requisitos funcionais
 ● Organização do código.
 ● Usabilidade.
 ● Organização do layout.
+
+## Uma imagem qu explique o funcionamento do app
+
+![Legenda](Teste_Pratico_Flutter\foto\explicação.png)

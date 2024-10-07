@@ -145,10 +145,10 @@ class _EditItemPageState extends State<EditItemPage> {
           children: [
             CircleAvatar(
               radius: 125,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: Colors.blue[200],
               child: CircleAvatar(
                 radius: 115,
-                backgroundColor: Colors.grey[300],
+                backgroundColor: Colors.blue[300],
                 backgroundImage:
                     image.text.isNotEmpty ? FileImage(File(image.text)) : null,
               ),
@@ -157,12 +157,12 @@ class _EditItemPageState extends State<EditItemPage> {
               bottom: 10,
               right: 10,
               child: CircleAvatar(
-                backgroundColor: Colors.grey[200],
+                backgroundColor: Colors.blue[200],
                 child: IconButton(
                   onPressed: _showOpcoesBottomSheet,
                   icon: Icon(
                     PhosphorIcons.pencilSimple,
-                    color: Colors.grey[400],
+                    color: Colors.blue[400],
                   ),
                 ),
               ),
